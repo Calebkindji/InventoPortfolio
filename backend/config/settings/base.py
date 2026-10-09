@@ -20,7 +20,7 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "").split(",")
     if host.strip()
-]
+] + ["testserver", "localhost", "127.0.0.1"]
 
 
 INSTALLED_APPS = [

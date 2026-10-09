@@ -75,6 +75,24 @@ class ProjectSerializer(serializers.ModelSerializer):
         end = attrs.get('end_date', getattr(self.instance, 'end_date', None))
         if start and end and end < start:
             raise serializers.ValidationError({'end_date': 'La date de fin doit être postérieure ou égale à la date de début.'})
+
+        # Limitation de 5 projets mis en avant au maximum par utilisateur
+        is_featured = attrs.get('is_featured', getattr(self.instance, 'is_featured', False))
+        if is_featured:
+            request = self.context.get('request')
+            if request and hasattr(request, 'user') and request.user.is_authenticated:
+                existing_featured = Project.objects.filter(user=request.user, is_featured=True)
+                if self.instance:
+                    existing_featured = existing_featured.exclude(pk=self.instance.pk)
+                if existing_featured.count() >= 5:
+                    raise serializers.ValidationError({'is_featured': 'Vous ne pouvez mettre en avant que 5 projets au maximum sur votre portfolio.'})
+
+        # Ajustement automatique de la progression pour les projets terminés
+        project_status = attrs.get('status', getattr(self.instance, 'status', None))
+        if project_status == Project.Status.COMPLETED:
+            if 'progress_percentage' not in attrs or attrs['progress_percentage'] < 100:
+                attrs['progress_percentage'] = 100
+
         return attrs
 
     def create(self, validated_data):
